@@ -2,14 +2,27 @@
 <html lang="en">
         <head>
             <link rel="stylesheet" href="queueStylesheet.css">
+            <script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js@3.0/dist/svg.min.js"></script>
+            <script src="drawingImport.js"></script>
             <script src="queueTest.js"></script>
         </head>
 
         <body>
-            <div id="drawingWindow"></div>
+            <textarea id="textBox"></textarea>
+
+        </br>
+        </br>
 
             <div id="buttonWindow">
-                <button id="addShapeButton">ADD SHAPE</button>
+                <button id="addShapeButton">Queue Function</button>
+                <select name="functions" id="functions">
+                    <option value="1">Display Text In Text Box</option>
+                    <option value="2">Animate Shape to Path</option>
+                </select>
+                <input type="text" id="textInput" placeholder="Input text here: ">
+                
             </div>
+
+            <div id="drawArea"></div>
         </body>
 </html>
