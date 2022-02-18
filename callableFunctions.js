@@ -4,7 +4,7 @@ var programCounter = 0;
 var mainAddressRegister = 0;
 var mainDataRegister = 0;
 var currentInstructionRegister = 0;
-var randomAccessMemory = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+var randomAccessMemory = [31,62,36,0,0,0,0,0,0,0,0,0,0,0,50,100];
 var userInput = 0;
 
 var mode = 2; // MODES: 0- Binary, 1- Hex, 2- Denary
