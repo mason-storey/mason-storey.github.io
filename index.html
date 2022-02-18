@@ -1,28 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
         <head>
-            <link rel="stylesheet" href="queueStylesheet.css">
-            <script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js@3.0/dist/svg.min.js"></script>
-            <script src="drawingImport.js"></script>
-            <script src="queueTest.js"></script>
+            <link rel="stylesheet" href="callableFunctionsStylesheet.css">
+            <script src="fileTest.js"></script>
+            <script src="callableFunctions.js"></script>
         </head>
 
         <body>
-            <textarea id="textBox"></textarea>
-
-        </br>
-        </br>
-
             <div id="buttonWindow">
-                <button id="addShapeButton">Queue Function</button>
-                <select name="functions" id="functions">
-                    <option value="1">Display Text In Text Box</option>
-                    <option value="2">Animate Shape to Path</option>
-                </select>
-                <input type="text" id="textInput" placeholder="Input text here: ">
-                
+                <button id="startProgramButton">START PROGRAM</button>
+                <label for="inputFile">UPLOAD CODE: </label>
+                <input type="file" id="inputFile">
             </div>
 
-            <div id="drawArea"></div>
+            <br><br>
+                MEMORY DISPLAY<br>
+                <textarea id="contentTarget"></textarea>
+            <br><br>
+
+            <div id="registerWindow">
+                <label for="programCounterHTMLBox"> PROGRAM COUNTER: </label>
+                <input type="text" id="programCounterHTMLBox" name="programCounterHTMLBox"><br><br>
+
+                <label for="accumulatorHTMLBox">ACCUMULATOR: </label>
+                <input type="text" id="accumulatorHTMLBox" name="accumulatorHTMLBox"><br><br>
+
+                <label for="currentInstructionRegisterHTMLBox">CURRENT INSTRUCTION REGISTER: </label>
+                <input type="text" id="currentInstructionRegisterHTMLBox" name="currentInstructionRegisterHTMLBox"><br><br>
+
+                <label for="mainAddressRegisterHTMLBox">MAIN ADDRESS REGISTER: </label>
+                <input type="text" id="mainAddressRegisterHTMLBox" name="mainAddressRegisterHTMLBox"><br><br>
+
+                <label for="mainDataRegisterHTMLBox">MAIN DATA REGISTER: </label>
+                <input type="text" id="mainDataRegisterHTMLBox" name="mainDataRegisterHTMLBox"><br><br>
+                
+            </div>
         </body>
 </html>

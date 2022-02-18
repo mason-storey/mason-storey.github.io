@@ -1,10 +1,4 @@
-textarea {
-    width: 500px;
-    height: 300px;
-}
-
-#drawArea {
-    width: 500px;
-    height: 500px;
-    background-color: darkgrey;
+#contentTarget {
+    width: 200px;
+    height: 275px;
 }
