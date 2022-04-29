@@ -1,39 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-        <head>
-            <link rel="stylesheet" href="callableFunctionsStylesheet.css">
-            <script src="fileTest.js"></script>
-            <script src="callableFunctions.js"></script>
-        </head>
+<html>
+    <head>
+        <!-- INCLUDING SVG LIBRARY, DRAWING.JS FOR DRAWAING FUNCTION, QUEUE.JS FOR QUEUE FUNCTIONS -->
+        <script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js@3.0/dist/svg.min.js"></script>
+        <script src="queue.js"></script>
+        <script src="drawing.js"></script>
+        <script src="fileHandling.js"></script>
+        <script src="registerClasses.js"></script>
+        <script src="simulator.js"></script>
 
-        <body>
-            <div id="buttonWindow">
-                <button id="startProgramButton">START PROGRAM</button>
-                <label for="inputFile">UPLOAD CODE: </label>
-                <input type="file" id="inputFile">
-            </div>
 
-            <br><br>
-                MEMORY DISPLAY<br>
-                <textarea id="contentTarget"></textarea>
-            <br><br>
+        <link rel="stylesheet" href="simulatorStylesheet.css">
+        <title>Fetch-Decode-Execute Simulator</title>
+    </head>
+    <body id="simulatorWindow">
 
-            <div id="registerWindow">
-                <label for="programCounterHTMLBox"> PROGRAM COUNTER: </label>
-                <input type="text" id="programCounterHTMLBox" name="programCounterHTMLBox"><br><br>
-
-                <label for="accumulatorHTMLBox">ACCUMULATOR: </label>
-                <input type="text" id="accumulatorHTMLBox" name="accumulatorHTMLBox"><br><br>
-
-                <label for="currentInstructionRegisterHTMLBox">CURRENT INSTRUCTION REGISTER: </label>
-                <input type="text" id="currentInstructionRegisterHTMLBox" name="currentInstructionRegisterHTMLBox"><br><br>
-
-                <label for="mainAddressRegisterHTMLBox">MAIN ADDRESS REGISTER: </label>
-                <input type="text" id="mainAddressRegisterHTMLBox" name="mainAddressRegisterHTMLBox"><br><br>
-
-                <label for="mainDataRegisterHTMLBox">MAIN DATA REGISTER: </label>
-                <input type="text" id="mainDataRegisterHTMLBox" name="mainDataRegisterHTMLBox"><br><br>
-                
-            </div>
-        </body>
+    </body>
 </html>

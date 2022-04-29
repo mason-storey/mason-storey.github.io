@@ -1,0 +1,44 @@
+* {
+    /* REMOVING WHITESPACE FROM TOP AND LEFT OF PAGE */
+    margin: 0;
+    padding: 0;
+}
+
+
+body {
+    width: 100%;
+    height: 100%;
+    background-color: rgb(53, 53, 53);
+}
+
+canvas {
+    /* REMOVING SCROLL BARS FROM THE CANVAS */
+    display: block;
+}
+
+.svg-container {
+    display: inline-block;
+    position : relative;
+    width : 100%;
+    padding-bottom: 100%;
+    vertical-align: top;
+    overflow: hidden;
+}
+
+.svg-content {
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.userButtons {
+    width: 100px;
+    height: 50px;
+}
+
+.memoryAddressSelect {
+    width: 100px;
+    height: 50px;
+
+}
