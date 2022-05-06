@@ -232,6 +232,17 @@ function branchZero(){
     finRunningQueueObject();
 }
 
+function branchAlways(){
+    // TO BRANCH ALWAYS
+    // 1. SEND CIR OPCODE TO DECODE UNIT
+    // 2. SEND CIR OPERAND TO PROGRAM COUNTER
+
+    addToFrontOfQueue(branchPCChange,[]);
+    addToFrontOfQueue(highlightRegister,["cpu-pc"]);
+    //addToFrontOfQueue(highlightInstruction,[]);
+    finRunningQueueObject();
+}
+
 // CHECKING ACCUMULATOR 
 function checkAccumulatorBranch(){
     // CHECKS ACCUMULATOR VALUE

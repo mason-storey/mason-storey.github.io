@@ -10,7 +10,7 @@ async function loadFile(event){
     lineArray = textFromFile.split("\r\n")
     for (var tempInt = 0; tempInt < lineArray.length;tempInt++){
         if (Number.isInteger(parseInt(lineArray[tempInt]))){
-            if (lineArray[tempInt] > -1 && lineArray[tempInt] < (2**bitSize)-1){
+            if (lineArray[tempInt] > -1 && lineArray[tempInt] < (2**bitSize)){
                 randomAccessMemory[tempInt] = parseInt(lineArray[tempInt]);
             } else {
                 randomAccessMemory[tempInt] = 0;
