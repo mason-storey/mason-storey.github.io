@@ -5,9 +5,17 @@ var bitSize = 8;
 var randomAccessMemory = [];
 var stepMode = false;
 var step = 0;
+var speedMode = false;
+var switches = [];
+var refreshRate = 0;
 
+// CREATING RAM AND SWITCHES ARRAYS
 for (var tempI = 0; tempI < 2**(bitSize-opcodeSize); tempI++ ){ 
     randomAccessMemory.push(0);
+}
+
+for (var tempI = 0; tempI < bitSize; tempI++){
+    switches.push(0);
 }
 
 // REGISTERS HAVE TO BE GLOBAL CLASSES
@@ -17,7 +25,7 @@ let mainAddressRegisterClass = new register();
 let mainDataRegisterClass = new register();
 let currentInstructionRegisterClass = new register();
 
-// DEFINING CONSTANTS
+// DEFINING CONSTANTS.
 // REGISTER SIZE CONSTANTS HERE
 var leftColumnWidth = 0.15;
 var rightColumnWidth = 0.2;
@@ -53,25 +61,50 @@ function FDEReset(){
         randomAccessMemory[tempI] = 0;
     }
 
+    // SETTING VALUE OF ALL CLASSES TO 0
     accumulatorClass.setValue(0);
     programCounterClass.setValue(0);
     mainAddressRegisterClass.setValue(0);
     mainDataRegisterClass.setValue(0);
     currentInstructionRegisterClass.setValue(0);
 
+    // SETTING ALL DRAWING VALUES TO 0
+    memoryAddressBoxValue = 0;
+    simulatorRadix = 10;
+    selectedExample = 0;
+
+    // CLEARING QUEUE, SHAPE AND PATH ARRAYS
+    clearArray(queue);
+    clearArray(staticShapeArray);
+    clearArray(pathArray);
+
     drawSimulator(draw,window.innerWidth,window.innerHeight);
+}
+
+// FUNCTION TO REMOVE ALL ELEMENTS FROM AN ARRAY
+function clearArray(array){
+    while (array.length > 0){
+        array.pop();
+    }
 }
 
 // RE CALLING THE FETCH DECOE EXECUTE
 function FDECheck(){
-    if (mainDataRegisterClass.getValue() > 0){
-        addToQueue(incrementProgramCounter,[]);
+    if (  Math.floor(currentInstructionRegisterClass.getValue()/ (2**(bitSize-opcodeSize))) != 0){
+        if (programCounterClass.getValue() < 31){
+            addToQueue(incrementProgramCounter,[]);
     
-        // DECODING + EXECUTING INSTRUCTION
-        addToQueue(decodeInstruction,[]);
+            // DECODING + EXECUTING INSTRUCTION
+            addToQueue(decodeInstruction,[]);
 
-        // FETCHING NEXT INSTRUCTION
-        addToQueue(FDE,[]);
+            // FETCHING NEXT INSTRUCTION
+            addToQueue(FDE,[]);
+        } else {
+            addToQueue(halt,[]);
+        }
+        
+    } else {
+        addToQueue(halt,[]);
     }
     finRunningQueueObject();
 }
@@ -84,13 +117,23 @@ function incrementProgramCounter(){
 
 // LOAD INSTRUCTION FROM MEMORY AT ADDRESS OF PROGRAM 
 function fetchInstruction(){
-    animateOnBus("pc-mar","cpu-pc","cpu-mar",false,false);
-    addToQueue(updateRegister,[programCounterClass,mainAddressRegisterClass,false]);  
-    animateOnBus("lr-mab","cpu-mar","memory-address",false,false);
-    animateOnBus("rl-mdb","memory-address","cpu-mdr",false,false);
-    addToQueue(readFromMemory,[]); 
-    animateOnBus("mdr-cir","cpu-mdr","cpu-cir",false,false);
-    addToQueue(updateRegister,[mainDataRegisterClass,currentInstructionRegisterClass,false]);     
+    if (!speedMode){
+        animateOnBus("pc-mar","cpu-pc","cpu-mar",false,false);
+        addToQueue(updateRegister,[programCounterClass,mainAddressRegisterClass,false]);  
+        animateOnBus("lr-mab","cpu-mar","memory-address",false,false);
+        animateOnBus("rl-mdb","memory-address","cpu-mdr",false,false);
+        addToQueue(readFromMemory,[]); 
+        animateOnBus("mdr-cir","cpu-mdr","cpu-cir",false,false);
+        addToQueue(updateRegister,[mainDataRegisterClass,currentInstructionRegisterClass,false]); 
+    } else {
+        addToQueue(updateRegister,[programCounterClass,mainAddressRegisterClass,false]); 
+        addToQueue(queueDrawSim,[]);
+        addToQueue(readFromMemory,[]);
+        addToQueue(queueDrawSim,[]); 
+        addToQueue(updateRegister,[mainDataRegisterClass,currentInstructionRegisterClass,false]); 
+        addToQueue(queueDrawSim,[]);
+    }
+        
 }
 
 // DECODING INSTRUCTION FROM MAIN DATA REGISTER
@@ -99,14 +142,10 @@ function decodeInstruction(){
     var value = currentInstructionRegisterClass.getValue(); 
 
     var opcode = Math.floor(value/ (2**(bitSize-opcodeSize)) );
-    var operand = value % 2**(bitSize-opcodeSize);
 
     // ALL THESE ARE ADDED IN REVERSE ORDER AS THEY ARE ADDED 
     // TO THE FONT OF THE QUEUE
     switch (opcode){
-        case 0:         // HALT
-            halt()
-            break;
         case 1:         // LOAD
             addToFrontOfQueue(load,[]);
             break;
@@ -123,6 +162,7 @@ function decodeInstruction(){
             addToFrontOfQueue(branchZero,[]);
             break;
         case 6:         // BRANCH > 0
+            addToFrontOfQueue(branchAlways,[]);
             break;
         case 7:
             break;
@@ -133,7 +173,7 @@ function decodeInstruction(){
 // FUNCTIONS USED BY THE SIMULATOR TO EXECUTE INSTRUCTIONS
 function halt(){
     window.alert("PROGRAM HAS FINISHED EXECUTING NOW");
-    return true;
+    finRunningQueueObject();
 }
 
 function load(){
@@ -144,13 +184,23 @@ function load(){
     // 4. MAIN DATA REGISTER -> ACCUMULATOR
     // -------------------- DONE --------------------
 
-    addToFrontOfQueue(updateRegister,[mainDataRegisterClass,accumulatorClass,false]);
-    animateOnBus("mdr-acc","cpu-mdr","cpu-acc",true,false);
-    addToFrontOfQueue(readFromMemory,[]);
-    animateOnBus("rl-mdb","memory-address","cpu-mdr",true,false);
-    animateOnBus("lr-mab","cpu-mar","memory-address",true,false);
-    addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
-    animateOnBus("cir-mar","cpu-cir","cpu-mar",true,true);
+    if (!speedMode){
+        addToFrontOfQueue(updateRegister,[mainDataRegisterClass,accumulatorClass,false]);
+        animateOnBus("mdr-acc","cpu-mdr","cpu-acc",true,false);
+        addToFrontOfQueue(readFromMemory,[]);
+        animateOnBus("rl-mdb","memory-address","cpu-mdr",true,false);
+        animateOnBus("lr-mab","cpu-mar","memory-address",true,false);
+        addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
+        animateOnBus("cir-mar","cpu-cir","cpu-mar",true,true);
+    } else {
+        addToFrontOfQueue(updateRegister,[mainDataRegisterClass,accumulatorClass,false]);
+        addToQueue(queueDrawSim,[]);
+        addToFrontOfQueue(readFromMemory,[]);
+        addToQueue(queueDrawSim,[]);
+        addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
+        addToQueue(queueDrawSim,[]);
+    }
+    
     //addToFrontOfQueue(highlightInstruction,[])
 
     // FINISHED ADDING TO QUEUE
@@ -166,17 +216,30 @@ function store(){
     // 4. MAIN DATA REGISTER -> MEOMRY ADDRESS
     // 5. SET CONTROL BUS TO 0 TO GO BACK TO READ
     // -------------------- DONE --------------------
+    if (!speedMode){
+        addToFrontOfQueue(highlightControlBus,[]);
+        addToFrontOfQueue(updateMemory,[])
+        animateOnBus("lr-mdb","cpu-mdr","memory-address",true,false);
+        animateOnBus("lr-mab","cpu-mar","memory-address",true,false);
+        addToFrontOfQueue(highlightControlBus,[]);
+        addToFrontOfQueue(updateRegister,[accumulatorClass,mainDataRegisterClass,false]);
+        animateOnBus("acc-mdr","cpu-acc","cpu-mdr",true,false)
+        addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
+        animateOnBus("cir-mar","cpu-cir","cpu-mar",true,true);
+        //addToFrontOfQueue(highlightInstruction,[]);
+    } else {
+        addToFrontOfQueue(highlightControlBus,[]);
+        addToQueue(queueDrawSim,[]);
+        addToFrontOfQueue(updateMemory,[])
+        addToQueue(queueDrawSim,[]);
+        addToFrontOfQueue(highlightControlBus,[]);
+        addToQueue(queueDrawSim,[]);
+        addToFrontOfQueue(updateRegister,[accumulatorClass,mainDataRegisterClass,false]);
+        addToQueue(queueDrawSim,[]);
+        addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
+        addToQueue(queueDrawSim,[]);
+    }
 
-    addToFrontOfQueue(highlightControlBus,[]);
-    addToFrontOfQueue(updateMemory,[])
-    animateOnBus("lr-mdb","cpu-mdr","memory-address",true,false);
-    animateOnBus("lr-mab","cpu-mar","memory-address",true,false);
-    addToFrontOfQueue(highlightControlBus,[]);
-    addToFrontOfQueue(updateRegister,[accumulatorClass,mainDataRegisterClass,false]);
-    animateOnBus("acc-mdr","cpu-acc","cpu-mdr",true,false)
-    addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
-    animateOnBus("cir-mar","cpu-cir","cpu-mar",true,true);
-    //addToFrontOfQueue(highlightInstruction,[]);
     finRunningQueueObject();
 }
 
@@ -188,15 +251,26 @@ function add(){
     // 4. RECEIVE DATA FROM MEMORY TO MAIN DATA REGISTER
     // 5. SEND MAIN DATA REGISTER TO ACCUMULATOR 
     // -------------------- DONE --------------------
+    if (!speedMode){
+        addToFrontOfQueue(addToAccFromMDR,[false]);
+        animateOnBus("mdr-acc","cpu-mdr","cpu-acc",true,false);
+        addToFrontOfQueue(readFromMemory,[]);
+        animateOnBus("rl-mdb","memory-address","cpu-mdr",true,false);
+        animateOnBus("lr-mab","cpu-mar","memory-address",true,false);
+        addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
+        animateOnBus("cir-mar","cpu-cir","cpu-mar",true,true);
+        //addToFrontOfQueue(highlightInstruction,[]);
+    } else {
+        addToFrontOfQueue(addToAccFromMDR,[false]);
+        addToQueue(queueDrawSim,[]);
+        addToFrontOfQueue(readFromMemory,[]);
+        addToQueue(queueDrawSim,[]);
+        addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
+        addToQueue(queueDrawSim,[]);
+    }
 
-    addToFrontOfQueue(addToAccFromMDR,[false]);
-    animateOnBus("mdr-acc","cpu-mdr","cpu-acc",true,false);
-    addToFrontOfQueue(readFromMemory,[]);
-    animateOnBus("rl-mdb","memory-address","cpu-mdr",true,false);
-    animateOnBus("lr-mab","cpu-mar","memory-address",true,false);
-    addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
-    animateOnBus("cir-mar","cpu-cir","cpu-mar",true,true);
-    //addToFrontOfQueue(highlightInstruction,[]);
+
+    
     finRunningQueueObject();
 }
 
@@ -208,15 +282,24 @@ function subtract(){
     // 4. RECEIVE DATA FROM MEMORY TO MAIN DATA REGISTER
     // 5. SEND MAIN DATA REGISTER TO ACCUMULATOR 
     // -------------------- DONE --------------------
+    if (!speedMode){
+        addToFrontOfQueue(addToAccFromMDR,[true]);
+        animateOnBus("mdr-acc","cpu-mdr","cpu-acc",true,false);
+        addToFrontOfQueue(readFromMemory,[]);
+        animateOnBus("rl-mdb","memory-address","cpu-mdr",true,false);
+        animateOnBus("lr-mab","cpu-mar","memory-address",true,false);
+        addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
+        animateOnBus("cir-mar","cpu-cir","cpu-mar",true,true);
+        //addToFrontOfQueue(highlightInstruction,[]);
+    } else {
+        addToFrontOfQueue(addToAccFromMDR,[true]);
+        addToQueue(queueDrawSim,[]);
+        addToFrontOfQueue(readFromMemory,[]);
+        addToQueue(queueDrawSim,[]);
+        addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
+        addToQueue(queueDrawSim,[]);
+    }
 
-    addToFrontOfQueue(addToAccFromMDR,[true]);
-    animateOnBus("mdr-acc","cpu-mdr","cpu-acc",true,false);
-    addToFrontOfQueue(readFromMemory,[]);
-    animateOnBus("rl-mdb","memory-address","cpu-mdr",true,false);
-    animateOnBus("lr-mab","cpu-mar","memory-address",true,false);
-    addToFrontOfQueue(updateRegister,[currentInstructionRegisterClass,mainAddressRegisterClass,true]);
-    animateOnBus("cir-mar","cpu-cir","cpu-mar",true,true);
-    //addToFrontOfQueue(highlightInstruction,[]);
     finRunningQueueObject();
 }
 
@@ -236,10 +319,16 @@ function branchAlways(){
     // TO BRANCH ALWAYS
     // 1. SEND CIR OPCODE TO DECODE UNIT
     // 2. SEND CIR OPERAND TO PROGRAM COUNTER
+    if (!speedMode){
+        addToFrontOfQueue(highlightRegister,["cpu-pc"]);
+        //addToFrontOfQueue(highlightInstruction,[]);
+        addToFrontOfQueue(branchPCChange,[]);
+    } else {
+        addToFrontOfQueue(branchPCChange,[]);
+        addToQueue(queueDrawSim,[]);
+    }
 
-    addToFrontOfQueue(branchPCChange,[]);
-    addToFrontOfQueue(highlightRegister,["cpu-pc"]);
-    //addToFrontOfQueue(highlightInstruction,[]);
+    
     finRunningQueueObject();
 }
 
@@ -248,14 +337,19 @@ function checkAccumulatorBranch(){
     // CHECKS ACCUMULATOR VALUE
     // IF ZERO PROGRAM COUNTER BECOMES 
     // OPERAND VALUE
+    if (!speedMode){
+        if (accumulatorClass.getValue() == 0){
+            addToFrontOfQueue(branchPCChange,[]);
+            addToFrontOfQueue(highlightRegister,["cpu-pc"]);    
+        } 
     
-    if (accumulatorClass.getValue() == 0){
-        addToFrontOfQueue(branchPCChange,[]);
-        addToFrontOfQueue(highlightRegister,["cpu-pc"]);    
-    } 
-
-    addToFrontOfQueue(highlightRegister,["cpu-acc"]);
-
+        addToFrontOfQueue(highlightRegister,["cpu-acc"]);    
+    } else {
+        if (accumulatorClass.getValue() == 0){
+            addToFrontOfQueue(branchPCChange,[]);
+        }
+    }
+    
     // FINISHED RUNNING QUEUE OBJECT
     finRunningQueueObject();
 }
@@ -288,6 +382,62 @@ function resizeSimulator(){
     drawSimulator(draw,window.innerWidth,window.innerHeight);
 }
 
+// GETTING THE REFRESH RATE OF THE MONITOR
+// USED TO MAKE SURE THAT THERE IS A ONE SECOND 
+// TRAVEL TIME FOR CIRCLES ALONG THE BUSES
+function getScreenRefreshRate(callback, runIndefinitely){
+    let requestId = null;
+    let callbackTriggered = false;
+    runIndefinitely = runIndefinitely || false;
+    let count = 0;
+
+    if (!window.requestAnimationFrame) {
+        window.requestAnimationFrame = window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame;
+    }
+    
+    let DOMHighResTimeStampCollection = [];
+
+    let triggerAnimation = function(DOMHighResTimeStamp){
+        DOMHighResTimeStampCollection.unshift(DOMHighResTimeStamp);
+        
+        if (DOMHighResTimeStampCollection.length > 10) {
+            let t0 = DOMHighResTimeStampCollection.pop();
+            let fps = Math.floor(1000 * 10 / (DOMHighResTimeStamp - t0));
+
+            if(!callbackTriggered){
+                callback.call(undefined, fps, DOMHighResTimeStampCollection);
+            }
+
+            if(runIndefinitely){
+                callbackTriggered = false;
+            }else if (count == 1){
+                callbackTriggered = true;
+                refreshRate = fps;
+            } else {
+                callbackTriggered = false;
+                count += 1;
+            }
+        }
+        requestId = window.requestAnimationFrame(triggerAnimation);
+    };
+    
+    window.requestAnimationFrame(triggerAnimation);
+
+    // Stop after half second if it shouldn't run indefinitely
+    if(!runIndefinitely){
+        window.setTimeout(function(){
+            window.cancelAnimationFrame(requestId);
+            requestId = null;
+        }, 500);
+    }
+}
+
+// FUNCTION TO DRAW SIMULATOR WINDOW, USES QUEUE
+function queueDrawSim(){
+    drawSimulator(draw,window.innerWidth,window.innerHeight);
+    finRunningQueueObject();
+}
+
 // MAIN CALL HERE WHEN WINDOW IS FULLY LOADED
 // SIMULATOR WILL BEGIN RUNNING HERE
 window.onload = function(){
@@ -300,9 +450,14 @@ window.onload = function(){
     // ADDING RESIZING FUNCTION HERE
     window.addEventListener('resize', resizeSimulator, false);
 
-    // ADDLING LISTENING FOR FILE DROPPING HERE
+    // ADDING LISTENING FOR FILE DROPPING HERE
     document.getElementById('simulatorWindow').addEventListener('drop',loadFile);
     removeDefaultDropFunctions();
+
+    //GETTING MONITOR REFRESH RATE
+    getScreenRefreshRate(function(FPS){});
+
+    
 
     // BEGINS RUNNING OF THE QUEUE FUNCTION
     runQueue(queue);

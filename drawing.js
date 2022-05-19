@@ -12,15 +12,26 @@ var backgroundRegisterColour = "E2E2E2";
 var redColour = "FF0000"
 var memoryAddressBoxValue = 0;
 var simulatorRadix = 10;
+var selectedExample = 0;
+
+// EXAMPLE CODES STORED HERE
+const examples = [
+    [36,101,95,0,50,50],
+    [63,123,95,60,157,92,168,192,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,3,1],
+    [58,155,90,61,124,93,58,169,192,61,95,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,50,10,1,0]
+];
 
 // DRAWS A RECTANGLE OF GIVEN WIDTH, HEIGHT, XPOS, YPOS
 // RETURNS TRUE IF THE RECTANGLE WAS DRAWN, FALSE IF NOT
-function drawRectangle(draw,xPos,yPos,width,height,colourStr,shapeUse){
+function drawRectangle(draw,xPos,yPos,width,height,colourStr,shapeUse,roundEdges){
     var shapePush = {type:"rect",object:"",use:shapeUse};
 
     if (validatePos(xPos,yPos)){
         // CREATING THE RECTANGLE AND ADDING IT TO THE RECTANGLE ARRAY
-        var rect = draw.rect(width,height).move(xPos,yPos).fill('#'+colourStr).radius(20,20);
+        var rect = draw.rect(width,height).move(xPos,yPos).fill('#'+colourStr);
+        if (roundEdges == true){
+            rect.radius(20,20);
+        }
         shapePush.object = rect;
         staticShapeArray.push(shapePush); // PUSHING RECTANGLE AND INFORMATION TO RECTANGLE ARRAY
 
@@ -75,7 +86,7 @@ function drawPath(draw,pathArgument,pathFill,strokeData,pathName){
 
 // FUNCTION TO DRAW REGISTER AT GIVEN POSITION WITH GIVEN DATA
 function drawRegisterBox(draw,xPos,yPos,width,height,colourStr,title,value,shapeUse){
-    drawRectangle(draw,xPos,yPos,width,height,colourStr,shapeUse);
+    drawRectangle(draw,xPos,yPos,width,height,colourStr,shapeUse,true);
     if (title == "CONTROL UNIT"){
         draw.text(title).x(xPos+width*0.38).y(yPos+height*0.38);
     } else if (title == "CURRENT INSTRUCTION REGISTER"){
@@ -88,17 +99,37 @@ function drawRegisterBox(draw,xPos,yPos,width,height,colourStr,title,value,shape
         draw.text(operand.toString(simulatorRadix)).x(xPos+width*3/4-5).y(yPos+height*(3/5));
     } else {
         draw.text(title).x(xPos+10).y(yPos+height/5);
-        draw.text(value.toString(simulatorRadix)).x(xPos+width/2-5).y(yPos+height*(3/5));
+        draw.text(padMemValue(value,simulatorRadix)).x(xPos+width/2-5).y(yPos+height*(3/5));
     }
 }
 
 // FUNCTION TO DRAW MEMORY ADDRESS
 function drawMemoryAddress(draw,xPos,yPos,width,height,colourStr,memoryIndex,value,shapeUse){
-    drawRectangle(draw,xPos,yPos,width,height,colourStr,shapeUse);
+    drawRectangle(draw,xPos,yPos,width,height,colourStr,shapeUse,true);
     draw.text("Mem Addr: "+ memoryIndex.toString()).x(xPos+10).y(yPos+height/5);
-    draw.text("Val: " + value.toString(simulatorRadix)).x(xPos+10).y(yPos+height*(2/5));
-
+    draw.text("Val: " + padMemValue(value,simulatorRadix)).x(xPos+10).y(yPos+height*(2/5));
     draw.text(translateValue(value)).x(xPos+10).y(yPos+height*(3/5));
+}
+
+// FUNCTION TO PAD ZEROS OR 0x TO VALUE 
+function padMemValue(value,simulatorRadix){
+    var returnString = value.toString(simulatorRadix);
+
+    // PADDING 0x or 0x0 TO HEXADECIMAL STRING
+    if (simulatorRadix == 16){
+        if (value < 16){
+            returnString = "0x0" + returnString;
+        } else {
+            returnString = "0x" + returnString;
+        }
+    } 
+    if (simulatorRadix == 2){
+        while(returnString.length < bitSize){
+            returnString = "0" + returnString;
+        }
+        returnString = returnString + "b";
+    }
+    return returnString;
 }
 
 
@@ -122,7 +153,7 @@ function drawInfoBox(draw,xPos,yPos,width,height,colourStr){
         {opcode:"110",information:"BRANCH ALWAYS"},
         {opcode:"111",information:"unused"}
     ];
-    drawRectangle(draw,xPos,yPos,width,height,colourStr,'infobox-background');
+    drawRectangle(draw,xPos,yPos,width,height,colourStr,'infobox-background',true);
 
     draw.text("OPCODES").x(xPos+(width*0.1)).y(yPos+height*0.03);
     draw.text("INFORMATION").x(xPos+(width*0.4)).y(yPos+height*0.03);
@@ -231,6 +262,7 @@ function highlightControlBus(){
 
 // ANIMATES VALUE ON THE BUS
 function animateValueOnBus(args){
+    // GETTING VARIABLES FROM PASSED ARGS
     var operandTick = args[2];
     // GETTING THE VALUE TO BE DISPLAYED ON THE BUS
     if(args[1].includes("memory-address")){
@@ -255,9 +287,13 @@ function requestAnimateValOnBus(path,value){
     var circle = draw.circle(30).fill('#F0F0F0');
     var number = draw.text(value.toString()).x(10);
 
+    // CREATING GROUP OF CIRCLE AND TEXT
     var group = draw.group();
     group.add(circle);
     group.add(number);
+
+    // CREATING MOVEMENT SIZE THAT WILL MOVE CIRCLE ALONG THE PATH IN 60 GOES
+    var movementSpace = path.length()/refreshRate;
 
     // n IS POSITION ALONG THE PATH
     let n = 0;
@@ -266,21 +302,21 @@ function requestAnimateValOnBus(path,value){
         let point = path.pointAt(n);
         // MOVES THE CIRCE TO THE POINT ON THE PATH 
         group.move(point.x - (group.width()/2), point.y - (group.height()/2) );
-        n += 2
+        n += movementSpace;
 
         // CHECKING IF THE CIRCLE HAS REACHED THE END OF THE PATH
         // IF TRUE IT REMOVES THE FUNCTION FROM THE QUEUE,
         // ELSE CONTINUES TO ANIMATE THE SHAPE ON THE PATH
-        if (!( (group.x() + (group.width()/2))==(path.pointAt(999999999).x) && (group.y() + (group.height()/2))==(path.pointAt(999999999).y) )){
+        if (!( (group.x() + (group.width()/2)).toFixed(2) == (path.pointAt(999999999).x).toFixed(2) && (group.y() + (group.height()/2)).toFixed(2) == (path.pointAt(999999999).y).toFixed(2) )){
             requestAnimationFrame(anim);
         } else {
 
             drawSimulator(draw,window.innerWidth,window.innerHeight); 
-            queue[0].finishedRunning = true;
+            if (!(queue.length == 0)){
+                queue[0].finishedRunning = true;
+            }
         } 
     }
-
-
 }
 
 // DRAWING SIMULATOR FUNCTION
@@ -304,7 +340,7 @@ function drawSimulator(draw,width,height){
     }
     
     // DRAWING CPU SIDE
-    drawRectangle(draw,width*0.02,height*0.02,width*0.4,height*0.68,"00e541","cpu-background"); // DRAWING BACKGROUND
+    drawRectangle(draw,width*0.02,height*0.02,width*0.4,height*0.68,"00e541","cpu-background",true); // DRAWING BACKGROUND
     drawRegisterBox(draw,width*leftColumnX,height*programCounterY,width*leftColumnWidth,height*registerHeight,backgroundRegisterColour,"PROGRAM COUNTER",programCounterClass.getValue(),"cpu-pc"); // DRAWING PROGRAM COUNTER BOX
     drawRegisterBox(draw,width*rightColumnX,height*mainAddressRegisterY,width*rightColumnWidth,height*registerHeight,backgroundRegisterColour,"MAIN ADDRESS REGISTER",mainAddressRegisterClass.getValue(),"cpu-mar"); // DRAWING MAIN ADDRESS REGISTER BOX
     drawRegisterBox(draw,width*(rightColumnX*13/10),height*accumulatorY,width*(rightColumnWidth*(7/10)),height*registerHeight,backgroundRegisterColour,"ACCUMULATOR",accumulatorClass.getValue(),"cpu-acc"); // DRAWING ACCUMULATOR REGISTER BOX
@@ -340,7 +376,6 @@ function drawSimulator(draw,width,height){
     pathCIRtoACC = "M" + (width*(rightColumnX + (rightColumnWidth)*(2/5))).toString() + " " + (height*(currentInstructionRegisterY)).toString() + " V" + (height*(accumulatorY+registerHeight)).toString(); 
     pathCIRtoMAR = "M" + (width*(rightColumnX + (rightColumnWidth)*(1/5))).toString() + " " + (height*(currentInstructionRegisterY)).toString() + " V" + (height*(mainAddressRegisterY+registerHeight)).toString(); 
 
-
     // DRAWING INTERNAL CPU BUSSES BETWEEN REGISTERS
     drawPath(draw,pathPCtoMAR,'none',{color:"#00A7A7",width:1},'pc-mar'); // PROGRAM COUNTER -> MAIN ADDRESS REGISTER
     drawPath(draw,pathMDRtoCIR,'none',{color:"#00A7A7",width:1},'mdr-cir'); // MAIN DATA REGISTER -> CURRENT INSTRUCTION REGISTER
@@ -358,8 +393,8 @@ function drawSimulator(draw,width,height){
     drawBus(draw,(width*(rightColumnX + (rightColumnWidth)*(1/5))),(height*(mainAddressRegisterY+registerHeight)),(width*(rightColumnX + (rightColumnWidth)*(1/5))),(height*currentInstructionRegisterY),busWidth,busColour,"buses-CIRtoMAR","");
 
     // DRAWING MEMORY SIDE
-    drawRectangle(draw,width*0.58,height*0.02,width*0.4,height*0.68,"a19400","memory-background");
-    drawRectangle(draw,width*0.59,height*0.03,width*0.38,height*0.66,"e1e1e1","memory-background");
+    drawRectangle(draw,width*0.58,height*0.02,width*0.4,height*0.68,"a19400","memory-background",true);
+    drawRectangle(draw,width*0.59,height*0.03,width*0.38,height*0.66,"e1e1e1","memory-background",true);
     // DRAWING MEMORY ADDRESSES
     for (var tempI = 0; tempI < randomAccessMemory.length; tempI++){
         memoryWidthStart = width*0.59;
@@ -370,10 +405,44 @@ function drawSimulator(draw,width,height){
         drawMemoryAddress(draw,memoryWidthStart + ((memoryWidth*width/4)*(tempI%4)),memoryHeightStart+ (height*memoryHeight)*(Math.floor(tempI/4)),(memoryWidth*width/4),(height*memoryHeight),"b1b1b1",tempI,randomAccessMemory[tempI],"memory-address"+(tempI.toString()));
     }
 
+    // DRAWING SWITCH INPUT
+    var switchBoxHeight = 60 * (height/1007);
+    var switchBoxWidth = 40 * (width/1920);
+    var switchGap = 30 * (width/1920);
+    var switchBackgroundColour = backgroundRegisterColour;
+    var switchForegroundColour = "535353";
+    var yPosSwitch = height*0.73;
+    var switchBorderSize = 5;
+    var switchHeight = (switchBoxHeight - switchBorderSize*2)/2;
+    var switchWidth = (switchBoxWidth - switchBorderSize*2);
+    var switchColour = "";
+
+    for (var tempI = 0; tempI < bitSize; tempI++){
+        // CREATING xPos OF EACH SWITCH
+        var xPosSwitch = (width*0.1) + (tempI*switchBoxWidth) + (tempI*switchGap);
+
+        // SETTING COLOUR OF SWITCH DEPENDING ON IF IT IS ON OR OFF
+        if (switches[tempI] == 0){
+            switchColour = "000000";
+        } else {
+            switchColour = "FF0000";
+        }
+
+        // DRAWING BACKGROUND, FOREGROUND, THEN SWITCH SQUARE
+        drawRectangle(draw, xPosSwitch,yPosSwitch,switchBoxWidth,switchBoxHeight,switchBackgroundColour,"switchBackground-"+(tempI+1).toString(),false);
+        drawRectangle(draw, xPosSwitch+switchBorderSize, yPosSwitch+switchBorderSize, switchBoxWidth-(switchBorderSize*2), switchBoxHeight-(switchBorderSize*2), switchForegroundColour,"switchForeground-"+(tempI+1).toString());
+
+        // DRARWING SWITCH IN CORREST STATE
+        drawRectangle(draw, xPosSwitch+switchBorderSize, yPosSwitch+switchBorderSize+(switchHeight * (1 - switches[tempI])), switchWidth, switchHeight, switchColour,"switch-"+(tempI+1).toString(), false);
+
+        addSwitchClickEvent("switch-"+(tempI+1).toString());
+
+    }
+
     // DRAWING LED OUTPUT 
     var ledRadius = width/1920 * 50;
     var ledGap = 30 * (width/1920);
-    var ledHeight = 0.72;
+    var ledHeight = 0.725;
 
     for (var tempI = 0; tempI < bitSize; tempI++){
         drawCircle(draw,(width*0.6) + (tempI*ledRadius) + (ledGap*tempI), height*ledHeight,ledRadius,ledOffColour,"led-"+(tempI+1).toString());
@@ -388,29 +457,27 @@ function drawSimulator(draw,width,height){
         var endY = height*ledBusHeight + ledRadius + busWidth;
         drawBus(draw,busX,startY,busX,endY,busWidth,busColour,"ledbus-"+(tempI+1).toString(),"");
     }
+    
     // DRAWING BUS FROM MEMORY TO LEDS
     var endLedX = (width*0.6) + (ledRadius+ledGap)*bitSize;
     drawBus(draw,width*0.6 + ledRadius/2,height*ledBusHeight + ledRadius + ((busWidth)/2), endLedX,height*ledBusHeight + ledRadius + ((busWidth)/2), busWidth,busColour,"buses-LED","");
     drawBus(draw,endLedX,height*0.69,endLedX,height*ledBusHeight + ledRadius + busWidth,busWidth,busColour,"buses-LED2","");
-
     checkLEDS();
 
     // DRAWING USER INTERACTION BAR
     // SETTING SIZES OF BUTTONS  DPEENDING ON SCREEN SIZE
-    drawRectangle(draw,0,height*0.8,width,height,"a2a2a2","userbar-background");
+    drawRectangle(draw,0,height*0.8,width,height,"a2a2a2","userbar-background",true);
 
     var buttonWidth = 100 * (width/1920);
     var buttonHeight = 50 * (height/1007);
-
     // DRAWING RUN AND RESET BUTTONS
     var runButton = draw.foreignObject(width*0.1,height*0.05).x(width*0.03).y(height*0.84);
     var resetButton = draw.foreignObject(width*0.1,height*0.05).x(width*0.03).y(height*0.92);
-
     runButton.add('<span id="run"><button type="button" id="runButton" class="userButtons" style="width:'+buttonWidth.toString()+ 'px;height:'+ buttonHeight.toString() + 'px">RUN</button></span>');
     resetButton.add('<span id="reset"><button type="button" id="resetButton" class="userButtons" style="width:'+buttonWidth.toString()+'px; height:'+ buttonHeight.toString() + 'px">RESET</button></span>');
 
     // DRAWING STEP MODE CHECK AND STEP BUTTON
-    var stepTickBox = draw.foreignObject(width*0.1,height*0.05).x(width*0.13).y(height*0.855);
+    var stepTickBox = draw.foreignObject(width*0.1,height*0.05).x(width*0.13).y(height*0.86);
     var nextStepBox = draw.foreignObject(width*0.1,height*0.05).x(width*0.13).y(height*0.92);
 
     // ADDING INPUT CHECKBOX AND STEP BUTTON
@@ -428,30 +495,55 @@ function drawSimulator(draw,width,height){
     document.getElementById('runButton').addEventListener("click", runFDEClick);
     document.getElementById('resetButton').addEventListener("click", resetFDEClick);
 
-    // DRAWING BASE SELECTION AREA
-    var radixSelect = draw.foreignObject(width*0.1,height*0.1).x(width*0.22).y(height*0.855);
+    // DRAWING RADIX SELECTION AREA
+    draw.text("BASE SELECTION").x(width*0.22).y(height*0.84);
+    var radixSelect = draw.foreignObject(width*0.1,height*0.1).x(width*0.22).y(height*0.86);
     radixSelect.add('<span id="radixSelect">'
     + '<select name="radixSelectTag" id="radixSelectTag">'
     + '<option id="binaryRadixSelect" value="binary">BINARY</option>'
     + '<option id="decimalRadixSelect" value="decimal">DECIMAL</option>'
     + '<option id="hexadecimalRadixSelect" value="hexadecimal">HEXADECIMAL</option>'
     + '</select></span');
-
     radixAddSelectedTag();
 
     // ADDING HOOK TO SELECT TO CHANGE RADIX OF SIMULATOR
     document.getElementById('radixSelectTag').addEventListener("change",updateRadix);
 
+    // DRAWING EXAMPLES SELECTION AREA
+    draw.text("LOAD EXAMPLES").x(width*0.32).y(height*0.84);
+    var exampleSelect = draw.foreignObject(width*0.1,height*0.1).x(width*0.32).y(height*0.86)
+    exampleSelect.add('<span id="exampleSelect">'
+    + '<select name="exampleSelectTag" id="exampleSelectTag">'
+    + '<option id="addTwoNumbersSelect" value="0">ADD TWO NUMS IN RAM</option>'
+    + '<option id="multiplySelect" value="1">MULTIPLY 2 NUMS</option>'
+    + '<option id="divideSelect" value="2">DIVIDE 2 NUMS</option>'
+    + '</select></span');
+    exampleAddSelectedTag();
+
+    // DRAWING LOAD EXAMPLE BUTTON
+    var exampleLoadButton = draw.foreignObject(width*0.1,height*0.05).x(width*0.32).y(height*0.92);
+    exampleLoadButton.add('<span id="loadExample"><button type="button" id="loadExampleButton" class="userButtons" style="width:'+buttonWidth.toString()+ 'px;height:'+ buttonHeight.toString() + 'px">LOAD EXAMPLE</button></span>')
+
+    // ADDING HOOK TO LOAD BUTTON
+    document.getElementById('loadExampleButton').addEventListener("click",loadExample);
+
+    // CREATING SPEED MODE TICK BOX
+    var speedModeTickBox = draw.foreignObject(width*0.1,height*0.05).x(width*0.44).y(height*0.86);
+    speedModeTickBox.add('<span id="speedModeTick"><input type="checkbox" id="speedModeTickBox" name="speedModeTickBox"><label for="speedModeTickBox">FAST EXECUTION</label></span>'); 
+    checkSpeedMode();
+    document.getElementById("speedModeTickBox").addEventListener('change',updateSpeedMode);
+
+
     // DRAWING CODE EDITOR 
     // DRAWING MEMORY ADDRESS SELECTOR INPUT BOX
-    var selectMemoryAddress = draw.foreignObject(width*0.1,height*0.05).x(width*0.60).y(height*0.88);
+    var selectMemoryAddress = draw.foreignObject(width*0.1,height*0.05).x(width*0.7).y(height*0.88);
     selectMemoryAddress.add('<span id="memAddrSelect"><input class="memoryAddressSelect" id="memoryAddressSelect" type="number" value="' + memoryAddressBoxValue.toString() + '" min=0 max="'+(2**(bitSize-opcodeSize)-1).toString()+'" style="width:'+buttonWidth.toString()+'px; height:'+ buttonHeight.toString() + 'px"/></span>');
-    draw.text("MEMORY ADDRESS").x(width*0.6).y(height*0.86);
+    draw.text("MEMORY ADDRESS").x(width*0.7).y(height*0.86);
 
     // DRAWING MEMORY VALUE SELECTOR BOX
-    var memoryValue = draw.foreignObject(width*0.1,height*0.05).x(width*0.75).y(height*0.88);
+    var memoryValue = draw.foreignObject(width*0.1,height*0.05).x(width*0.8).y(height*0.88);
     memoryValue.add('<span id="memValueBox"><input class="memoryValue" id="memoryValue" value="' + randomAccessMemory[memoryAddressBoxValue].toString(simulatorRadix) + '" style="width:'+buttonWidth.toString()+'px; height:'+ buttonHeight.toString() + 'px"/></span>');
-    draw.text("MEMORY VALUE").x(width*0.75).y(height*0.86);
+    draw.text("MEMORY VALUE").x(width*0.8).y(height*0.86);
 
     // ADDING HOOKS TO MEOMRY ADDRESS
     document.getElementById('memoryAddressSelect').addEventListener('change', updateMemoryInputValue);
@@ -464,8 +556,6 @@ function drawSimulator(draw,width,height){
         }
     });
 
-    // FIREFOX FIX HERE
-    draw.viewbox(0,0,window.innerWidth,window.innerHeight);
 }
 
 // FUNCTION TO TAKE VALUE FROM THE INPUT BOX AND ADD IT TO MEMORY
@@ -485,6 +575,9 @@ function inputValueToMemory(){
     // REQUIRES UPDATEVALUE OT BE PARSED --- NEED TO CREATE PARSER FOR HEX, BIN AND DECIMAL
     if (updateValue > -1 && updateValue < (2**bitSize)){
         randomAccessMemory[parseInt(memoryAddress)] = parseInt(updateValue);
+        if (memoryAddressBoxValue < (2**(bitSize-opcodeSize))-1){
+            memoryAddressBoxValue += 1;
+        }
     }
 
     drawSimulator(draw,window.innerWidth,window.innerHeight);
@@ -494,7 +587,12 @@ function inputValueToMemory(){
 function updateMemoryInputValue(){
     var memoryAddress = parseInt(document.getElementById('memoryAddressSelect').value);
 
-    document.getElementById('memoryValue').value = randomAccessMemory[memoryAddress].toString(simulatorRadix);
+    if (memoryAddress > 0 && memoryAddress < 2**(bitSize-opcodeSize)){
+        document.getElementById('memoryValue').value = randomAccessMemory[memoryAddress].toString(simulatorRadix);
+    } else {
+        document.getElementById('memoryAddressSelect').value = 0;
+    }
+    
 }
 
 // UPDATES VALUE OF REGISTER BASED ON WHAT IS PASSED TO IT
@@ -538,7 +636,9 @@ function readFromMemory(passedArgs){
 // FUNCTION TO INDICATE TO QUEUE THAT OBJECT HAS FINISHED RUNNING
 function finRunningQueueObject(){
     drawSimulator(draw,window.innerWidth,window.innerHeight);
-    queue[0].finishedRunning = true;
+    if (!(queue.length == 0)){
+        queue[0].finishedRunning = true;
+    }
 }
 
 // TRANSLATING VALUE IN MEMORY TO OP CODE AND MEMORY ADDRESS
@@ -568,7 +668,7 @@ function translateValue(value){
             returnString += "BRANCH ZERO "
             break;
         case 6:
-            returnString += "BRANCH > 0 "
+            returnString += "BRANCH ALWAYS "
             break;
         case 7:
             returnString += "unused "
@@ -619,6 +719,45 @@ function setLedOnOff(led,status){
     
 }
 
+// FUNCTION TO ADD CLCIK EVENT FOR SWITCHES
+function addSwitchClickEvent(switchName){
+    // GETTING SWITCH SHAPE FROM SHAPE ARRAY
+    // GETTING NUMBER OF SWITCH
+    var switchIndexInShapeArray = staticShapeArray.findIndex((element) => element.use === switchName);
+    var switchNumber = parseInt(switchName.slice(switchName.length-1))-1;
+
+    // GETTING THE SWITCH OBJECT WHICH WILL MOVE
+    var switchObject = staticShapeArray[switchIndexInShapeArray].object;
+
+    
+
+    // SWITCH WILL CHANGE POSITION WHEN CLICKED
+    switchObject.click(function(){
+         if (switches[switchNumber] == 1){
+            switches[switchNumber] = 0;
+            setMemAddr30Value();
+            drawSimulator(draw,window.innerWidth,window.innerHeight);
+         } else {
+            switches[switchNumber] = 1;
+            setMemAddr30Value();
+            drawSimulator(draw,window.innerWidth,window.innerHeight);
+         }
+    });
+}
+
+// SETTING THE VALEU OF MEMORY ADDRESS 30 TO THE ONE REPRESENTED BY THE SWITCHES
+function setMemAddr30Value(){
+    var switchesValue = 0;
+
+    // ITERATING THROUGH SWITCHES, ADDING IF SWITCH IS HIGH
+    for (var tempI = 0; tempI < bitSize; tempI++){
+        switchesValue += (2**(bitSize-1-tempI))*switches[tempI];
+    }
+
+    // SETTING MEMORY ADDRESS
+    randomAccessMemory[30] = switchesValue; 
+}
+
 // FUNCTION TO CHECK IF STEP MODE BOX IS TICKED
 function checkStepMode(){
     var stepModeTickBoxChecked = document.getElementById("nextStepCheckBox");
@@ -630,7 +769,7 @@ function checkStepMode(){
     }
 }
 
-// FUNCTION TO UPDATE STEP MODE VALUE ON CLCIK OF CHECK BOX 
+// FUNCTION TO UPDATE STEP MODE VALUE ON CLICK OF CHECK BOX 
 function updateStepMode(){
     var stepModeTickBoxChecked = document.getElementById("nextStepCheckBox").checked;
     
@@ -641,6 +780,25 @@ function updateStepMode(){
 function nextStepPressed(){
     step = 1;
 }
+
+// FUNCTION TO CHECK IF SPEED MODE IS TICKED OR NOT
+function checkSpeedMode(){
+    var speedModeTickBoxChecked= document.getElementById("speedModeTickBox");
+
+    if (speedMode == true){
+        speedModeTickBoxChecked.checked = true;
+    } else {
+        speedModeTickBoxChecked.checked = false;
+    }
+}
+
+// FUNCTION TO UPDATE SPEED MODE VALUE ON CLICK OF CHECK BOX
+function updateSpeedMode(){
+    var speedModeTickBoxChecked = document.getElementById("speedModeTickBox").checked;
+
+    speedMode = speedModeTickBoxChecked;
+}
+
 
 // FUNCTION TO UPDATE RADIX OF SIMULATOR
 function updateRadix(){
@@ -676,6 +834,36 @@ function radixAddSelectedTag(){
     }
 }
 
+// FUNCTION TO LOAD EXAMPLE TO RAM BASED ON SELECTION
+function loadExample(){
+    // GETS VALUE FROM DROP DOWN SELECTION MENU
+    // LOADS EXAMPLE TO RAM FROM PREMADE CODES
+    var exampleSelection = document.getElementById('exampleSelectTag').value
+
+    selectedExample = exampleSelection;
+
+    // LOADING SELECTION TO RAM
+    var exampleToLoad = examples[exampleSelection];
+
+    for (var tempI = 0; tempI < exampleToLoad.length; tempI++){
+        randomAccessMemory[tempI] = exampleToLoad[tempI];
+    }
+
+    // DRAWING SIMULATOR
+    drawSimulator(draw, window.innerWidth, window.innerHeight);
+}
+
+// FUNCTION TO ADD SEELCTED TAG TO OPTION OF EXAMPLE LOAD DROP DOWN BOX
+function exampleAddSelectedTag(){
+    if (selectedExample == 1){
+        document.getElementById("multiplySelect").setAttribute('selected','selected');
+    } else if (selectedExample == 2){
+        document.getElementById("divideSelect").setAttribute('selected','selected');
+    } else {
+        document.getElementById("addTwoNumbersSelect").setAttribute('selected','selected');
+    }
+}
+
 // RUN FDE FROM CLICK
 function runFDEClick(){
     if (queue.length == 0){
@@ -685,22 +873,8 @@ function runFDEClick(){
 
 // RESET FDE FROM CLICK
 function resetFDEClick(){
-    var stepModeHoldState = stepMode;
-
-    stepMode = true;
-    if (queue.length > 0){
-        while(queue[0].finishedRunning = false){
-        };
-    }
-
-    while (queue.length != 0){
-        queue.pop();
-    }
-
     FDEReset();
-    stepMode = stepModeHoldState;
 
     // FIX FOR STEP MODE BUTTON ACTIVATING WHEN STEPMODE IS FALSE
     document.getElementById('nextStepCheckBox').checked = false;
-    
 }
